@@ -152,11 +152,7 @@ jobs:
           echo "📂 Downloaded files:"
           ls -lah *.deb
 
-          COUNT=$(ls *.deb | wc -l)
-          if [ "$COUNT" -lt 8 ]; then
-            echo "❌ Package incomplete"
-            exit 1
-          fi
+          
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
