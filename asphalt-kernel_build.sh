@@ -65,6 +65,20 @@ echo "✅ All patches applied successfully"
 
 cp ../sm8475.config .config
 
+# Resolve any new/unknown config symbols from patches non-interactively
+echo "🔧 Running olddefconfig to sync config..."
+make ARCH=arm64 CC="ccache clang" LLVM=1 olddefconfig
+
+# Show which critical configs were dropped by olddefconfig
+echo "🔍 Checking critical configs after olddefconfig..."
+for cfg in CONFIG_PINCTRL_SM8475 CONFIG_TOUCHSCREEN_NOVATEK_NT36523N_SPI CONFIG_DRM_PANEL_NOVATEK_NT36523; do
+    if grep -q "^${cfg}=" .config; then
+        echo "  ✅ ${cfg} = $(grep "^${cfg}=" .config | cut -d= -f2)"
+    else
+        echo "  ❌ ${cfg} was DROPPED — patch likely missing Kconfig entry"
+    fi
+done
+
 make -j$(nproc) ARCH=arm64 CC="ccache clang" LLVM=1 Image Image.gz dtbs modules
 _kernel_version="$(make kernelrelease -s)"
 
