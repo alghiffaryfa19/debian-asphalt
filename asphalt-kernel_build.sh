@@ -26,7 +26,7 @@ export STRIP="llvm-strip"
 git clone https://github.com/alghiffaryfa19/asphalt-mainline linux
 cd linux
 
-cp ../sm8475.config .config
+make ARCH="arm64" defconfig sm8475.config
 
 # Resolve any new/unknown config symbols from patches non-interactively
 # echo "🔧 Running olddefconfig to sync config..."
