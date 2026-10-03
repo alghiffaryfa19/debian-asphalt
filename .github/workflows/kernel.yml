@@ -1,0 +1,128 @@
+name: Build Kernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      kernel_version:
+        description: "Kernel Version (Ex: 7.2.8)"
+        required: true
+        default: "7.2.8"
+
+jobs:
+  build:
+    name: "Build Kernel v${{ github.event.inputs.kernel_version || '7.2.8' }}"
+    runs-on: ubuntu-24.04-arm
+    permissions:
+      contents: write
+
+    steps:
+      - name: "Checkout Code"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          submodules: recursive
+
+      - name: "Setting up ccache cache"
+        uses: actions/cache@v4
+        id: cache-ccache
+        with:
+          path: /home/runner/.ccache
+          key: ${{ runner.os }}-ccache-kernel-${{ github.event.inputs.kernel_version || '7.2.8' }}-${{ github.ref_name }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-kernel-${{ github.event.inputs.kernel_version || '7.2.8' }}-
+            ${{ runner.os }}-ccache-kernel-
+
+      - name: "Setting up Build Environment"
+        run: |
+          echo "⚙️ Installing build tools..."
+          sudo apt update
+          sudo apt install -y build-essential flex bison libssl-dev libelf-dev bc ccache clang llvm lld systemd-ukify systemd-boot-efi mtools
+          echo "✅ Build tools installed"
+          mkdir -p /home/runner/.ccache
+          ccache --set-config=max_size=10G
+          ccache --set-config=cache_dir=/home/runner/.ccache
+          ccache --set-config=sloppiness=file_macro,locale,time_macros
+
+          echo "Cache hit status: ${{ steps.cache-ccache.outputs.cache-hit }}"
+
+      - name: "Build Kernel"
+        id: build
+        run: |
+          echo "Building Kernel Version ${{ github.event.inputs.kernel_version || '7.2.8' }}"
+          echo "Cache Status: ${{ steps.cache-ccache.outputs.cache-hit }}"
+          export CCACHE_DIR=/home/runner/.ccache
+          export CCACHE_MAXSIZE=10G
+          export PATH="/usr/lib/ccache:$PATH"
+
+          bash asphalt-kernel_build.sh "${{ github.event.inputs.kernel_version || '7.2.8' }}" "${{ github.workspace }}"
+
+          echo "Kernel compiled successfully"
+          echo "ccache statistics:"
+          ccache --show-stats --verbose | grep -E "(hit rate|cache hit|cache miss|max size)" || true
+
+      - name: "Collect Build Artifacts"
+        id: collect_artifacts
+        run: |
+          echo "Find Build Artifacts..."
+          find . -name "*.deb" -type f | head -20
+
+          echo "Build Artifacts List:"
+          ls -la *.deb 2>/dev/null || echo "No .deb files found"
+          echo ""
+          echo "File Size Statistics:"
+          du -h *.deb 2>/dev/null || echo "No artifacts found"
+
+          PKG_COUNT=$(ls -1 *.deb 2>/dev/null | wc -l)
+          echo " 共找到 $PKG_COUNT 个包文件"
+          echo "pkg_count=$PKG_COUNT" >> $GITHUB_OUTPUT
+
+      - name: "Upload Build Artifacts"
+        uses: actions/upload-artifact@v4
+        with:
+          name: kernel-${{ github.event.inputs.kernel_version || '7.2.8' }}
+          path: "*.deb"
+          retention-days: 7
+          if-no-files-found: error
+
+      - name: Upload single boot.img
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot_single.img
+          path: ${{ github.workspace }}/boot_asphalt_singleboot.img
+
+      - name: Upload dual boot.img
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot_dual.img
+          path: ${{ github.workspace }}/boot_asphalt_dualboot.img
+
+      - name: "Create GitHub Release"
+        if: steps.collect_artifacts.outputs.pkg_count > 0 && github.event_name == 'workflow_dispatch'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: kernel-${{ github.event.inputs.kernel_version || '7.2.8' }}
+          name: "Kernel ${{ github.event.inputs.kernel_version || '7.2.8' }}"
+          body: |
+            🧩 Kernel ${{ github.event.inputs.kernel_version || '7.2.8' }}
+
+            --- 
+
+            ### 🔧 Build Info
+            | Item | Details |
+            |------|---------|
+            | Kernel Version | ${{ github.event.inputs.kernel_version || '7.2.8' }} |
+            | Build Method | GitHub Actions Auto Build |
+
+            --- 
+
+            ### 📦 Included Packages
+            - linux-xiaomi-asphalt.deb
+            - firmware-xiaomi-asphalt.deb  
+            - alsa-xiaomi-asphalt.deb
+            - install.7z
+          draft: false
+          prerelease: false
+          files: "*.deb"
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

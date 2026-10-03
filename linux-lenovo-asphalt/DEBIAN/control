@@ -1,0 +1,6 @@
+Package: linux-lenovo-asphalt
+Version: 7.2.8
+Architecture: arm64
+Maintainer: Fauzan
+Section: kernel
+Description: Kernel and Modules for Lenovo Asphalt

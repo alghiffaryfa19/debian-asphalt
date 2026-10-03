@@ -1,0 +1,7 @@
+Package: firmware-lenovo-asphalt
+Version: 2.0
+Architecture: arm64
+Maintainer: Fauzan
+Conflicts: linux-firmware
+Replaces: linux-firmware
+Description: Firmware blobs & Configs for Lenovo Asphalt
