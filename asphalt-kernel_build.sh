@@ -66,8 +66,8 @@ echo "✅ All patches applied successfully"
 cp ../sm8475.config .config
 
 # Resolve any new/unknown config symbols from patches non-interactively
-echo "🔧 Running olddefconfig to sync config..."
-make ARCH=arm64 CC="ccache clang" LLVM=1 olddefconfig
+# echo "🔧 Running olddefconfig to sync config..."
+# make ARCH=arm64 CC="ccache clang" LLVM=1 olddefconfig
 
 # Show which critical configs were dropped by olddefconfig
 echo "🔍 Checking critical configs after olddefconfig..."
