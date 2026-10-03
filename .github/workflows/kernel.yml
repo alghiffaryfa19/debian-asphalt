@@ -36,7 +36,7 @@ jobs:
         run: |
           echo "⚙️ Installing build tools..."
           sudo apt update
-          sudo apt install -y build-essential flex bison libssl-dev libelf-dev bc ccache clang llvm lld systemd-ukify systemd-boot-efi mtools
+          sudo apt install -y build-essential flex bison libssl-dev libelf-dev bc ccache clang llvm lld systemd-ukify systemd-boot-efi mtools m4 alsa-utils
           echo "✅ Build tools installed"
           mkdir -p /home/runner/.ccache
           ccache --set-config=max_size=10G
@@ -116,9 +116,9 @@ jobs:
             --- 
 
             ### 📦 Included Packages
-            - linux-xiaomi-asphalt.deb
-            - firmware-xiaomi-asphalt.deb  
-            - alsa-xiaomi-asphalt.deb
+            - linux-lenovo-asphalt.deb
+            - firmware-lenovo-asphalt.deb  
+            - alsa-lenovo-asphalt.deb
             - install.7z
           draft: false
           prerelease: false

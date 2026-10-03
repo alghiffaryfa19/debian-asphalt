@@ -133,7 +133,7 @@ ln -s Lenovo-Y700/Lenovo-Y700.conf conf.d/sm8475/Lenovo-Y700.conf
 
 
 
-cd ../../../..
+cd ../../../../..
 
 git clone https://github.com/linux-msm/audioreach-topology
 cd audioreach-topology
@@ -143,7 +143,7 @@ cd ..
 wget https://raw.githubusercontent.com/dianqk/nixos-android-devices/refs/heads/main/pkgs/asphalt/audio/Lenovo-Y700.m4 -O Lenovo-Y700.m4
 m4 -I audioreach-topology Lenovo-Y700.m4 > Lenovo-Y700-tplg.conf
 alsatplg -c Lenovo-Y700-tplg.conf -o Lenovo-Y700-tplg.bin
-mv Lenovo-Y700-tplg.bin firmware-lenovo-asphalt/usr/lib/firmware/qcom/sm8475/Lenovo-Y700-tplg.bin
+install -Dm0644 Lenovo-Y700-tplg.bin firmware-lenovo-asphalt/usr/lib/firmware/qcom/sm8475/Lenovo-Y700-tplg.bin
 
 dpkg-deb --build --root-owner-group linux-lenovo-asphalt
 dpkg-deb --build --root-owner-group firmware-lenovo-asphalt
