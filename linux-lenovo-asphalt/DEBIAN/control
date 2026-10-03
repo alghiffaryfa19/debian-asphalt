@@ -1,5 +1,5 @@
 Package: linux-lenovo-asphalt
-Version: 7.2.8
+Version: 7.3-rc5
 Architecture: arm64
 Maintainer: Fauzan
 Section: kernel
