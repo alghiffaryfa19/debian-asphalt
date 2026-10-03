@@ -33,32 +33,47 @@ cd linux-${KERNEL_VERSION}
 mkdir asphalt-patch
 cp -r ../nixos-android-devices/pkgs/linux-kernel/sm8475/asphalt/patches/* asphalt-patch/
 
-git apply asphalt-patch/local/0001-sm8475-core.patch
-git apply asphalt-patch/local/0002-asphalt-display.patch
-git apply asphalt-patch/local/0003-asphalt-touch.patch
-git apply asphalt-patch/local/0004-sm8475-pcie-wifi.patch
-git apply asphalt-patch/local/0005-sm8475-ufs-clocks.patch
-git apply asphalt-patch/local/0006-asphalt-board-dts.patch
-git apply asphalt-patch/local/0007-sm8450-iris-video.patch
-git apply asphalt-patch/local/0008-asphalt-usb-audio.patch
-git apply asphalt-patch/local/0009-cs35l45-dsp-part-name.patch
-git apply asphalt-patch/local/0010-qmp-hardware-port-select.patch
-git apply asphalt-patch/local/0011-sm8475-audio-service-setup.patch
-git apply asphalt-patch/sm-x800-linux/0012-sm8450-camss.patch
-git apply asphalt-patch/sm-x800-linux/0013-camcc-shared-rcg.patch
-git apply asphalt-patch/local/0014-wl2864c-regulators.patch
-git apply asphalt-patch/local/0015-asphalt-sensors.patch
-git apply asphalt-patch/local/0016-asphalt-camera-wiring.patch
-git apply asphalt-patch/sm-x800-linux/0017-camcc-retain-ff.patch
-git apply asphalt-patch/local/0018-asphalt-displayport.patch
-git apply asphalt-patch/local/0019-dp-debug-connector.patch
-git apply asphalt-patch/upstream/0020-lucid-ole-preserve-enabled-pll.patch
+apply_patch() {
+    local patch="$1"
+    echo "  → Applying $patch"
+    git apply "$patch" || { echo "❌ FAILED: $patch"; exit 1; }
+}
+
+echo "📦 Applying patches..."
+apply_patch asphalt-patch/local/0001-sm8475-core.patch
+apply_patch asphalt-patch/local/0002-asphalt-display.patch
+apply_patch asphalt-patch/local/0003-asphalt-touch.patch
+apply_patch asphalt-patch/local/0004-sm8475-pcie-wifi.patch
+apply_patch asphalt-patch/local/0005-sm8475-ufs-clocks.patch
+apply_patch asphalt-patch/local/0006-asphalt-board-dts.patch
+apply_patch asphalt-patch/local/0007-sm8450-iris-video.patch
+apply_patch asphalt-patch/local/0008-asphalt-usb-audio.patch
+apply_patch asphalt-patch/local/0009-cs35l45-dsp-part-name.patch
+apply_patch asphalt-patch/local/0010-qmp-hardware-port-select.patch
+apply_patch asphalt-patch/local/0011-sm8475-audio-service-setup.patch
+apply_patch asphalt-patch/sm-x800-linux/0012-sm8450-camss.patch
+apply_patch asphalt-patch/sm-x800-linux/0013-camcc-shared-rcg.patch
+apply_patch asphalt-patch/local/0014-wl2864c-regulators.patch
+apply_patch asphalt-patch/local/0015-asphalt-sensors.patch
+apply_patch asphalt-patch/local/0016-asphalt-camera-wiring.patch
+apply_patch asphalt-patch/sm-x800-linux/0017-camcc-retain-ff.patch
+apply_patch asphalt-patch/local/0018-asphalt-displayport.patch
+apply_patch asphalt-patch/local/0019-dp-debug-connector.patch
+apply_patch asphalt-patch/upstream/0020-lucid-ole-preserve-enabled-pll.patch
+echo "✅ All patches applied successfully"
 
 
 cp ../sm8475.config .config
 
 make -j$(nproc) ARCH=arm64 CC="ccache clang" LLVM=1 Image Image.gz dtbs modules
 _kernel_version="$(make kernelrelease -s)"
+
+# Verify DTB was actually built before proceeding
+if [ ! -f arch/arm64/boot/dts/qcom/sm8475-lenovo-asphalt.dtb ]; then
+    echo "❌ FATAL: sm8475-lenovo-asphalt.dtb not found after build!"
+    echo "   → Patch 0006-asphalt-board-dts.patch may have failed or DTS Makefile entry is missing."
+    exit 1
+fi
 
 # =========================
 # Validate critical kernel configs (ref: nixos-android-devices)
