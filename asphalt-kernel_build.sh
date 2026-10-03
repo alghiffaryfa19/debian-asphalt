@@ -1,3 +1,5 @@
+set -e
+
 # 仅在未设置环境变量时配置ccache
 if [ -z "$CCACHE_DIR" ]; then
     export CCACHE_DIR="/home/runner/.ccache"
