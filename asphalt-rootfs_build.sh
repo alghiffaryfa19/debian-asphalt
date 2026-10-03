@@ -90,6 +90,10 @@ ls -lah rootdir/tmp/
 
 chroot rootdir bash -c 'apt update && apt install -y --allow-downgrades -o Dpkg::Options::="--force-overwrite" /tmp/*.deb' || exit 1
 
+# Force initramfs generation for installed kernel modules
+echo "🛠️ Forcing initramfs generation..."
+chroot rootdir bash -c 'for k in /lib/modules/*; do if [ -d "$k" ]; then update-initramfs -c -k $(basename $k) || true; fi; done'
+
 echo "✅ All custom .deb installed"
 
 # root password

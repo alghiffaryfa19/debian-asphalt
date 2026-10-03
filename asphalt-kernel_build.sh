@@ -112,7 +112,7 @@ install -Dm644 arch/$ARCH/boot/Image.gz \
     $PKGDIR/boot/Image.gz
 
 install -Dm644 arch/$ARCH/boot/Image \
-    $PKGDIR/boot/Image
+    $PKGDIR/boot/vmlinuz-${_kernel_version}
 
 install -Dm644 arch/$ARCH/boot/dts/qcom/sm8475-lenovo-asphalt.dtb \
     $PKGDIR/boot/sm8475-lenovo-asphalt.dtb
