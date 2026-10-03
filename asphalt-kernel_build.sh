@@ -55,7 +55,7 @@ git apply asphalt-patch/upstream/0020-lucid-ole-preserve-enabled-pll.patch
 
 cp ../sm8475.config .config
 
-make -j$(nproc) ARCH=arm64 CC="ccache clang" LLVM=1
+make -j$(nproc) ARCH=arm64 CC="ccache clang" LLVM=1 Image.gz dtbs modules
 _kernel_version="$(make kernelrelease -s)"
 
 
