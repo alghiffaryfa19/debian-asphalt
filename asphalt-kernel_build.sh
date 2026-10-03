@@ -21,8 +21,8 @@ export OBJDUMP="llvm-objdump"
 export READELF="llvm-readelf"
 export STRIP="llvm-strip"
 
-wget https://cdn.kernel.org/pub/linux/kernel/v7.x/linux-${KERNEL_VERSION}.tar.xz
-tar -xvf linux-${KERNEL_VERSION}.tar.xz
+wget https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/snapshot/linux-${KERNEL_VERSION}.tar.gz
+tar -xvf linux-${KERNEL_VERSION}.tar.gz
 
 git clone https://github.com/dianqk/nixos-android-devices
 
