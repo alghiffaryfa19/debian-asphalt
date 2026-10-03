@@ -55,8 +55,37 @@ git apply asphalt-patch/upstream/0020-lucid-ole-preserve-enabled-pll.patch
 
 cp ../sm8475.config .config
 
-make -j$(nproc) ARCH=arm64 CC="ccache clang" LLVM=1 Image.gz dtbs modules
+make -j$(nproc) ARCH=arm64 CC="ccache clang" LLVM=1 Image Image.gz dtbs modules
 _kernel_version="$(make kernelrelease -s)"
+
+# =========================
+# Validate critical kernel configs (ref: nixos-android-devices)
+# =========================
+echo "🔍 Validating kernel configuration..."
+WARN_COUNT=0
+for cfg in \
+    CONFIG_BLK_DEV_INITRD=y \
+    CONFIG_RD_ZSTD=y \
+    CONFIG_PINCTRL_SM8475=y \
+    CONFIG_SCSI_UFS_QCOM=y \
+    CONFIG_USB_DWC3=y \
+    CONFIG_USB_DWC3_QCOM=y \
+    CONFIG_DRM_MSM=y \
+    CONFIG_DRM_PANEL_NOVATEK_NT36523=y \
+    CONFIG_TOUCHSCREEN_NOVATEK_NT36523N_SPI=y \
+    CONFIG_ATH11K_PCI=y \
+    CONFIG_PHY_QCOM_QMP_COMBO=y \
+    CONFIG_MODULE_COMPRESS_ZSTD=y; do
+    if ! grep -q "^${cfg}$" .config; then
+        echo "⚠️  WARNING: ${cfg} not found in .config"
+        WARN_COUNT=$((WARN_COUNT+1))
+    fi
+done
+if [ $WARN_COUNT -eq 0 ]; then
+    echo "✅ All critical kernel configs validated"
+else
+    echo "⚠️  ${WARN_COUNT} config warning(s) — build continues"
+fi
 
 
 sed -i "s/Version:.*/Version: ${_kernel_version}/" ../linux-lenovo-asphalt/DEBIAN/control
@@ -96,14 +125,27 @@ install -Dm644 System.map \
     
 chmod +x ../mkbootimg
 
-cat arch/arm64/boot/Image.gz arch/arm64/boot/dts/qcom/sm8475-lenovo-asphalt.dtb > Image.gz-dtb_asphalt
+# =========================
+# Generate boot images (header v2 + DTB, adapted from nixos-android-devices)
+# Uses Image (uncompressed) + separate DTB (not concatenated)
+# Offsets: base=0x0, kernel=0x8000, ramdisk=0x1000000, tags=0x100, dtb=0x1f00000
+# Note: tanpa --ramdisk di sini. Boot image dengan initramfs dibuat di rootfs build.
+# =========================
+MKBOOTIMG_COMMON="--base 0x00000000 --kernel_offset 0x00008000 --ramdisk_offset 0x01000000 --tags_offset 0x00000100 --dtb_offset 0x01f00000 --pagesize 4096 --header_version 2 --id"
 
-install -Dm644 Image.gz-dtb_asphalt \
-    $PKGDIR/boot/Image.gz-dtb_asphalt
+../mkbootimg \
+    --kernel arch/$ARCH/boot/Image \
+    --dtb arch/$ARCH/boot/dts/qcom/sm8475-lenovo-asphalt.dtb \
+    --cmdline "root=PARTLABEL=linux rootwait rw fsck.repair=yes" \
+    $MKBOOTIMG_COMMON \
+    -o ../boot_asphalt_dualboot.img
 
-mv Image.gz-dtb_asphalt zImage_asphalt
-../mkbootimg --kernel zImage_asphalt --cmdline "root=PARTLABEL=linux rootwait rw fsck.repair=yes" --base 0x00000000 --kernel_offset 0x00008000 --tags_offset 0x01e00000 --pagesize 4096 --id -o ../boot_asphalt_dualboot.img
-../mkbootimg --kernel zImage_asphalt --cmdline "root=PARTLABEL=userdata rootwait rw fsck.repair=yes" --base 0x00000000 --kernel_offset 0x00008000 --tags_offset 0x01e00000 --pagesize 4096 --id -o ../boot_asphalt_singleboot.img
+../mkbootimg \
+    --kernel arch/$ARCH/boot/Image \
+    --dtb arch/$ARCH/boot/dts/qcom/sm8475-lenovo-asphalt.dtb \
+    --cmdline "root=PARTLABEL=userdata rootwait rw fsck.repair=yes" \
+    $MKBOOTIMG_COMMON \
+    -o ../boot_asphalt_singleboot.img
 
 
 make -j$(nproc) ARCH=arm64 CC="ccache clang" LLVM=1 INSTALL_MOD_PATH=../linux-lenovo-asphalt modules_install
