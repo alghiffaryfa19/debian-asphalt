@@ -67,7 +67,7 @@ chroot rootdir apt install -y \
     systemd sudo vim wget curl \
     network-manager openssh-server \
     wpasupplicant dbus \
-    initramfs-tools zstd
+    initramfs-tools zstd systemd-boot-efi
 
 # Configure initramfs to use zstd (required by NixOS reference config)
 sed -i 's/^COMPRESS=.*/COMPRESS=zstd/' rootdir/etc/initramfs-tools/initramfs.conf
@@ -233,6 +233,56 @@ if [ -f boot_out/initrd.img ] && [ -f boot_out/vmlinuz ] && [ -f boot_out/sm8475
 else
     echo "⚠️ Skipping boot image generation (missing initrd, vmlinuz, or dtb)"
 fi
+
+# =========================
+# 🥾 U-Boot EFI system partition
+# =========================
+if ! command -v mkfs.fat >/dev/null 2>&1; then
+    echo "mkfs.fat not found; install dosfstools on the build host" >&2
+    exit 1
+fi
+
+ESP_IMG="${distro_type}_${distro_version}_${FLAVOUR}_${MODE}_${TIMESTAMP}_linux-boot.img"
+ESP_SIZE="1G"
+if [ "$MODE" = "dual" ]; then
+    ROOT_PARTLABEL="linux"
+else
+    ROOT_PARTLABEL="userdata"
+fi
+
+EFI_LOADER=$(find rootdir/usr/lib/systemd/boot/efi -type f \
+    -iname 'systemd-bootaa64.efi*' -print -quit)
+if [ -z "$EFI_LOADER" ]; then
+    echo "ARM64 systemd-boot EFI binary not found in rootfs" >&2
+    exit 1
+fi
+if [ ! -s boot_out/vmlinuz ] || [ ! -s boot_out/initrd.img ]; then
+    echo "Kernel or initramfs missing; cannot make the U-Boot EFI boot partition" >&2
+    exit 1
+fi
+
+truncate -s "$ESP_SIZE" "$ESP_IMG"
+mkfs.fat -F 32 -n LINUX_BOOT "$ESP_IMG"
+mount -o loop "$ESP_IMG" rootdir/boot
+mkdir -p rootdir/boot/EFI/BOOT rootdir/boot/loader/entries
+install -m 0644 "$EFI_LOADER" rootdir/boot/EFI/BOOT/BOOTAA64.EFI
+install -m 0644 boot_out/vmlinuz rootdir/boot/vmlinuz
+install -m 0644 boot_out/initrd.img rootdir/boot/initrd.img
+cat > rootdir/boot/loader/loader.conf <<EOF
+default debian.conf
+timeout 3
+editor no
+EOF
+cat > rootdir/boot/loader/entries/debian.conf <<EOF
+title Debian GNU/Linux (Lenovo Asphalt)
+linux /vmlinuz
+initrd /initrd.img
+options root=PARTLABEL=${ROOT_PARTLABEL} rootwait rw fsck.repair=yes
+EOF
+sync
+umount rootdir/boot
+fsck.fat -n "$ESP_IMG"
+echo "✅ U-Boot EFI partition created: $ESP_IMG"
 
 # unmount
 umount rootdir/dev/pts || true

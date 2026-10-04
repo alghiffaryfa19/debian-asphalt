@@ -1,0 +1,8 @@
+Package: uboot-lenovo-asphalt
+Version: 2026.10~rc5
+Architecture: arm64
+Maintainer: Fauzan
+Section: admin
+Description: U-Boot Android boot image for Lenovo Asphalt (TB320FC)
+ This package only installs the validated boot image. It does not flash device
+ firmware; install the image to boot_b using the checked ABL fastboot workflow.

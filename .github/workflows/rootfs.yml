@@ -134,6 +134,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y \
             debootstrap \
+            dosfstools \
             p7zip-full \
             curl
           echo "✅ 工具安装完成"
