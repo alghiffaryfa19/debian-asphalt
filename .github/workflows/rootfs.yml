@@ -199,6 +199,15 @@ jobs:
             exit 1
           fi
 
+          ESP_IMAGE=$(find . -maxdepth 1 -type f -name '*_linux-boot.img' -print -quit)
+          if [[ -n "$ESP_IMAGE" ]]; then
+            echo "✅ 找到 U-Boot EFI 分区镜像: $ESP_IMAGE"
+            echo "esp_image_path=$ESP_IMAGE" >> "$GITHUB_OUTPUT"
+          else
+            echo "❌ 错误：未生成 linux-boot ESP 镜像！"
+            exit 1
+          fi
+
           # 检查Boot镜像（所有Server变体）
           if [[ "$DISTRO" == "*-server" && -f "xiaomi-k20pro-boot.img" ]]; then
             echo "✅ 找到Boot镜像: xiaomi-k20pro-boot.img"
@@ -215,12 +224,32 @@ jobs:
           if-no-files-found: error
           compression-level: 0
 
+      - name: "📤 上传 linux-boot ESP 到Artifact"
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-boot-${{ matrix.distro }}-${{ needs.prepare-release.outputs.kernel_version }}
+          path: ${{ steps.build_rootfs.outputs.esp_image_path }}
+          retention-days: 14
+          if-no-files-found: error
+          compression-level: 0
+
       - name: "🚀 直接上传小文件到Release"
         if: ${{ !github.event.inputs.skip_release && steps.build_rootfs.outputs.file_size_gb < 2 }}
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           files: ${{ steps.build_rootfs.outputs.file_path }}
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: "🚀 上传 linux-boot ESP 到Release"
+        if: ${{ !github.event.inputs.skip_release }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.RELEASE_TAG }}
+          files: ${{ steps.build_rootfs.outputs.esp_image_path }}
           draft: false
           prerelease: false
         env:
