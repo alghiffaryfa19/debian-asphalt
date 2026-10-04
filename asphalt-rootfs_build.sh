@@ -256,18 +256,21 @@ if [ -z "$EFI_LOADER" ]; then
     echo "ARM64 systemd-boot EFI binary not found in rootfs" >&2
     exit 1
 fi
-if [ ! -s boot_out/vmlinuz ] || [ ! -s boot_out/initrd.img ]; then
-    echo "Kernel or initramfs missing; cannot make the U-Boot EFI boot partition" >&2
+if [ ! -s boot_out/vmlinuz ] || [ ! -s boot_out/initrd.img ] || \
+    [ ! -s boot_out/sm8475-lenovo-asphalt.dtb ]; then
+    echo "Kernel, initramfs, or board DTB missing; cannot make the U-Boot EFI boot partition" >&2
     exit 1
 fi
 
 truncate -s "$ESP_SIZE" "$ESP_IMG"
 mkfs.fat -F 32 -n LINUX_BOOT "$ESP_IMG"
 mount -o loop "$ESP_IMG" rootdir/boot
-mkdir -p rootdir/boot/EFI/BOOT rootdir/boot/loader/entries
+mkdir -p rootdir/boot/EFI/BOOT rootdir/boot/EFI/asphalt rootdir/boot/loader/entries
 install -m 0644 "$EFI_LOADER" rootdir/boot/EFI/BOOT/BOOTAA64.EFI
 install -m 0644 boot_out/vmlinuz rootdir/boot/vmlinuz
 install -m 0644 boot_out/initrd.img rootdir/boot/initrd.img
+install -m 0644 boot_out/sm8475-lenovo-asphalt.dtb \
+    rootdir/boot/EFI/asphalt/sm8475-lenovo-asphalt.dtb
 cat > rootdir/boot/loader/loader.conf <<EOF
 default debian.conf
 timeout 3
@@ -277,6 +280,7 @@ cat > rootdir/boot/loader/entries/debian.conf <<EOF
 title Debian GNU/Linux (Lenovo Asphalt)
 linux /vmlinuz
 initrd /initrd.img
+devicetree /EFI/asphalt/sm8475-lenovo-asphalt.dtb
 options root=PARTLABEL=${ROOT_PARTLABEL} rootwait rw fsck.repair=yes
 EOF
 sync

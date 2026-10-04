@@ -33,11 +33,13 @@ git clone https://github.com/dianqk/nixos-android-devices nixos-android-devices
 Untuk lokasi lain, set `NIXOS_ANDROID_DEVICES=/path/to/nixos-android-devices`.
 
 Script membangun `devices.asphalt.u-boot` dan firmware dari U-Boot v2026.10-rc5
-yang dipin di flake referensi, menjalankan `tests/asphalt-uboot.py`, lalu
-membangun image DTBO nonaktif yang disediakan referensi, lalu membuat:
+yang dipin di flake referensi, menjalankan `tests/asphalt-uboot.py`, dan membuat
+image DTBO nonaktif yang diekspor referensi:
 
 - `build/uboot/boot_asphalt_uboot.img`: image yang akan di-flash ke `boot_b`.
-- `build/uboot/asphalt-disabled-dtbo.img`: DTBO nol 24 MiB untuk `dtbo_b`.
+- `build/uboot/asphalt-disabled-dtbo.img`: DTBO nol 24 MiB yang diekspor oleh
+   referensi. Keberadaan artifact ini sendiri bukan instruksi untuk mem-flash
+   atau menghapus `dtbo_b`; ikuti panduan perangkat referensi untuk keputusan itu.
 - `build/uboot/uboot-lenovo-asphalt_2026.10~rc5_arm64.deb`: salinan image di
   `/usr/share/uboot-lenovo-asphalt/`; instalasi paket tidak mem-flash perangkat.
 
@@ -46,8 +48,12 @@ sebagai root dan pastikan paket kernel/firmware/ALSA `.deb` tersedia di direktor
 kerja seperti yang dibutuhkan script saat ini. Selain image root ext4 dan image
 Android lama, `./asphalt-rootfs_build.sh debian-desktop <kernel> <user> <password>`
 sekarang menghasilkan image ESP `*_linux-boot.img` FAT32 berukuran 1 GiB. ESP itu
-berisi systemd-boot ARM64 fallback, kernel, initrd, dan loader entry. Kernel
-harus mempertahankan `CONFIG_EFI_STUB=y` (sudah aktif di `sm8475.config`).
+berisi systemd-boot ARM64 fallback, kernel, initrd, DTB Linux Asphalt, dan loader
+entry dengan directive `devicetree`. Alur ini mengikuti
+[`modules/mobile/uefi.nix`](https://github.com/dianqk/nixos-android-devices/blob/main/modules/mobile/uefi.nix),
+yang juga memasang DTB Linux tersendiri di ESP. Kernel harus mempertahankan
+`CONFIG_EFI_STUB=y` (sudah aktif di `sm8475.config`). Build ulang dan flash image
+ESP setelah perubahan ini; image ESP lama belum memuat DTB EFI tersebut.
 
 Image `boot_asphalt_*_initramfs.img` yang masih dibuat oleh build rootfs adalah
 artefak Android/Linux lama; **jangan flash image tersebut sebagai pengganti
@@ -94,17 +100,12 @@ ukuran 1 GiB, `linux` ext4, dan firmware target `boot_b`.
    `--execute` untuk menulis image. Jangan gunakan perintah flash saat sudah
    berada di U-Boot; backend U-Boot Fastboot pada perangkat ini bukan backend
    UFS. CLI juga menolak target selain `boot_b` atau jika slot B tidak aktif.
-4. Flash DTBO nonaktif referensi ke slot B. **Jangan gunakan `fastboot erase
-   dtbo_b`**; gunakan image 24 MiB hasil build agar isi partisi dalam format
-   yang disediakan untuk konfigurasi Asphalt:
-
-   ```sh
-   fastboot flash dtbo_b build/uboot/asphalt-disabled-dtbo.img
-   ```
-
-5. Setelah kedua flash berhasil, pastikan slot B masih aktif lalu reboot. ABL
-   akan menjalankan U-Boot dari `boot_b`;
-   U-Boot kemudian memuat systemd-boot dari `linux-boot`, yang memilih kernel dan
+4. Jangan menghapus atau mengganti `dtbo_b` sebagai langkah troubleshooting
+   kecuali panduan perangkat yang sesuai secara eksplisit memintanya. Jangan
+   menyimpulkan bahwa image DTBO nol memperbaiki pesan kompatibilitas ABL.
+5. Setelah image U-Boot dan ESP dipasang sesuai layout, pastikan slot B aktif
+   lalu reboot. ABL akan menjalankan U-Boot dari `boot_b`; U-Boot kemudian
+   memuat systemd-boot dari `linux-boot`, yang memilih kernel dan
    initrd Debian. Simpan recovery RAM yang berfungsi untuk pemulihan.
 
 ## Catatan pemulihan
