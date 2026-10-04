@@ -51,6 +51,7 @@ jobs:
           name: asphalt-uboot-${{ github.run_id }}-${{ github.run_attempt }}
           path: |
             build/uboot/boot_asphalt_uboot.img
+            build/uboot/asphalt-disabled-dtbo.img
             build/uboot/uboot-lenovo-asphalt_2026.10~rc5_arm64.deb
             build/uboot/SHA256SUMS
           if-no-files-found: error

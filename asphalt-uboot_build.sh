@@ -21,13 +21,17 @@ fi
 mkdir -p "$OUTPUT_DIR"
 IMAGE_LINK="$OUTPUT_DIR/result-image"
 FIRMWARE_LINK="$OUTPUT_DIR/result-firmware"
+DTBO_LINK="$OUTPUT_DIR/result-disabled-dtbo"
 
 nix build "$REFERENCE#devices.asphalt.u-boot" --builders '' --out-link "$IMAGE_LINK"
 nix build "$REFERENCE#devices.asphalt.u-boot.firmware" --builders '' --out-link "$FIRMWARE_LINK"
+nix build "$REFERENCE#devices.asphalt.disabled-dtbo" --builders '' --out-link "$DTBO_LINK"
 
 IMAGE=$(readlink -f "$IMAGE_LINK")
 FIRMWARE=$(readlink -f "$FIRMWARE_LINK")
+DTBO=$(readlink -f "$DTBO_LINK")
 python3 "$REFERENCE/tests/asphalt-uboot.py" "$FIRMWARE" "$IMAGE"
+test "$(stat -c %s "$DTBO")" -eq 25165824
 
 PACKAGE_ROOT=$(mktemp -d "$OUTPUT_DIR/package.XXXXXXXX")
 trap 'rm -rf "$PACKAGE_ROOT"' EXIT
@@ -41,7 +45,9 @@ dpkg-deb --build --root-owner-group \
     "$OUTPUT_DIR/uboot-lenovo-asphalt_2026.10~rc5_arm64.deb"
 
 install -Dm0644 "$IMAGE" "$OUTPUT_DIR/boot_asphalt_uboot.img"
+install -Dm0644 "$DTBO" "$OUTPUT_DIR/asphalt-disabled-dtbo.img"
 sha256sum "$OUTPUT_DIR/boot_asphalt_uboot.img" \
+    "$OUTPUT_DIR/asphalt-disabled-dtbo.img" \
     "$OUTPUT_DIR/uboot-lenovo-asphalt_2026.10~rc5_arm64.deb" \
     | tee "$OUTPUT_DIR/SHA256SUMS"
-echo "U-Boot image and Debian package are in: $OUTPUT_DIR"
+echo "U-Boot image, disabled DTBO image, and Debian package are in: $OUTPUT_DIR"

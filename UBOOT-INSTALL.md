@@ -34,9 +34,10 @@ Untuk lokasi lain, set `NIXOS_ANDROID_DEVICES=/path/to/nixos-android-devices`.
 
 Script membangun `devices.asphalt.u-boot` dan firmware dari U-Boot v2026.10-rc5
 yang dipin di flake referensi, menjalankan `tests/asphalt-uboot.py`, lalu
-membuat:
+membangun image DTBO nonaktif yang disediakan referensi, lalu membuat:
 
 - `build/uboot/boot_asphalt_uboot.img`: image yang akan di-flash ke `boot_b`.
+- `build/uboot/asphalt-disabled-dtbo.img`: DTBO nol 24 MiB untuk `dtbo_b`.
 - `build/uboot/uboot-lenovo-asphalt_2026.10~rc5_arm64.deb`: salinan image di
   `/usr/share/uboot-lenovo-asphalt/`; instalasi paket tidak mem-flash perangkat.
 
@@ -93,7 +94,16 @@ ukuran 1 GiB, `linux` ext4, dan firmware target `boot_b`.
    `--execute` untuk menulis image. Jangan gunakan perintah flash saat sudah
    berada di U-Boot; backend U-Boot Fastboot pada perangkat ini bukan backend
    UFS. CLI juga menolak target selain `boot_b` atau jika slot B tidak aktif.
-4. Setelah flash berhasil, reboot. ABL akan menjalankan U-Boot dari `boot_b`;
+4. Flash DTBO nonaktif referensi ke slot B. **Jangan gunakan `fastboot erase
+   dtbo_b`**; gunakan image 24 MiB hasil build agar isi partisi dalam format
+   yang disediakan untuk konfigurasi Asphalt:
+
+   ```sh
+   fastboot flash dtbo_b build/uboot/asphalt-disabled-dtbo.img
+   ```
+
+5. Setelah kedua flash berhasil, pastikan slot B masih aktif lalu reboot. ABL
+   akan menjalankan U-Boot dari `boot_b`;
    U-Boot kemudian memuat systemd-boot dari `linux-boot`, yang memilih kernel dan
    initrd Debian. Simpan recovery RAM yang berfungsi untuk pemulihan.
 
